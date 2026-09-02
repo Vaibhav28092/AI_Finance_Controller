@@ -1,0 +1,13 @@
+# Security
+.env
+
+# Python Caches & Environments
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+env/
+.venv/
+
+# OS Files
+.DS_Store

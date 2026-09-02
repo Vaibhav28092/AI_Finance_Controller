@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pandas
+numpy
+openai
+pydantic
+python-multipart
+python-dotenv
+streamlit
+faker
+openpyxl
+requests
+pypdf
+pyarrow
