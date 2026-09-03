@@ -40,8 +40,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 3. Environment & State
-API_KEY = os.getenv("API_KEY", "Key_2026")
-HEADERS = {"API-Key": API_KEY}
+BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "Key_2026")
+HEADERS = {"API-Key": BACKEND_API_KEY}
 API_URL = "http://127.0.0.1:8000"
 
 if "recon_data" not in st.session_state:

@@ -15,15 +15,15 @@ from src.agent.schemas import ChatRequest
 load_dotenv()
 app = FastAPI(title = "Secure Recon API")
 
-API_KEY = os.getenv("API_KEY","Key_2026")
+BACKEND_API_KEY = os.getenv("BACKEND_API_KEY","Key_2026")
 
-if not API_KEY:
-    raise RuntimeError("CRITICAL SECURITY ERROR: API_SECRET_KEY is not set in the environment variables.")
+if not BACKEND_API_KEY:
+    raise RuntimeError("CRITICAL SECURITY ERROR: BACKEND_API_KEY is not set in the environment variables.")
 
 api_key_header = APIKeyHeader(name="API-KEY", auto_error = True)
 
 def verify_api_key(api_key: str = Security(api_key_header)):
-    if api_key != API_KEY:
+    if api_key != BACKEND_API_KEY:
         raise HTTPException(status_code = 403, detail = "Invalid API Key")
     return api_key
 
