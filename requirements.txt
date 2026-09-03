@@ -13,3 +13,4 @@ requests
 pypdf
 pyarrow
 plotly
+python-magic
