@@ -42,7 +42,7 @@ st.markdown("""
 # 3. Environment & State
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "Key_2026")
 HEADERS = {"API-Key": BACKEND_API_KEY}
-API_URL = "http://127.0.0.1:8000"
+BACKEND_API_URL = "https://ai-finance-controller-ogvh.onrender.com"
 
 if "recon_data" not in st.session_state:
     st.session_state.recon_data = None
@@ -79,7 +79,7 @@ with st.expander("Upload Files", expanded=(st.session_state.recon_data is None))
                     "settlements": (file_sett.name, file_sett.getvalue(), "application/json"),
                     "bank": (file_bank.name, file_bank.getvalue(), "text/csv"),
                 }
-                res = requests.post(f"{API_URL}/api/reconcile", files=files, headers=HEADERS)
+                res = requests.post(f"{BACKEND_API_URL}/api/reconcile", files=files, headers=HEADERS)
                 if res.status_code == 200:
                     st.session_state.recon_data = res.json()
                     
@@ -171,7 +171,7 @@ if st.session_state.recon_data:
                     with st.spinner("Analyzing..."):
                         payload = {"question": st.session_state.chat_history[-1]["content"], "batch_id": data["batch_id"]}
                         try:
-                            res = requests.post(f"{API_URL}/api/chat", json=payload, headers=HEADERS)
+                            res = requests.post(f"{BACKEND_API_URL}/api/chat", json=payload, headers=HEADERS)
                             if res.status_code == 200:
                                 answer = res.json().get("answer", "Error retrieving answer.")
                                 st.markdown(answer)
