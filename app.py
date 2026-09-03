@@ -71,7 +71,9 @@ with st.expander("Upload Files", expanded=(st.session_state.recon_data is None))
     
     if up_c4.button("Run AI Audit", use_container_width=True, type="primary"):
         if file_orders and file_sett and file_bank:
-            with st.spinner("Processing 3-way match..."):
+
+            # Added UI Spinner to mask Render's cold start delay
+            with st.spinner("Waking up API backend... (This may take up to 50s on initial load)"):
                 files = {
                     "orders": (file_orders.name, file_orders.getvalue(), "text/csv"),
                     "settlements": (file_sett.name, file_sett.getvalue(), "application/json"),
