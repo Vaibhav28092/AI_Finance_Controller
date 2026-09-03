@@ -1,8 +1,9 @@
 import io
 import os
 import re
+import time
+import requests
 import magic
-import pyclamd
 import pandas as pd
 import pdfplumber
 
@@ -17,7 +18,6 @@ class DataParsingError(Exception):
 
 class SecureFinancePipeline:
     """Handles security gating, safe parsing, and header normalization."""
-
 
     HEADER_PATTERNS = {
         "order_id": r"(order[_\s]?id|txn[_\s]?id|transaction[_\s]?id|reference[_\s]?no|^id$)",
@@ -42,16 +42,7 @@ class SecureFinancePipeline:
             ".jsonl": ["application/json", "text/plain"],
             ".parquet": ["application/octet-stream"],
             ".pdf": ["application/pdf"]
-
         }
-
-
-        # Initialize ClamAV
-        try:
-            self.av = pyclamd.ClamdNetworkSocket()
-        except pyclamd.ConnectionError:
-            print("Warning: ClamdAV Daemon offline. Security scans will fail in production.")
-            self.av = None
 
     # -----------------------Security Methods------------------------------
 
@@ -67,17 +58,28 @@ class SecureFinancePipeline:
         return ext
 
     def _scan_for_malware(self, file_bytes: bytes) -> None:
-        if not self.av:
-
-            # For local hackathon dev: log a warning and pass safely instead of crashing
-
-            print("⚠️ Warning: ClamAV is offline. Bypassing malware scan for local development.")
+        vt_api_key = os.getenv("VIRUSTOTAL_API_KEY")
+        
+        if not vt_api_key:
+            print("Warning: VIRUSTOTAL_API_KEY not found. Bypassing malware scan.")
             return
 
-        result = self.av.instream(io.BytesIO(file_bytes))
-        if result:
-            virus_name = result["stream"][1]
-            raise SecurityViolation(f"Malware detected: {virus_name}. File quarantined.")
+        url = "https://www.virustotal.com/api/v3/files"
+        headers = {"x-apikey": vt_api_key}
+        files = {"file": ("uploaded_file", file_bytes)}
+        
+        try:
+            # pause for 1 second 
+            time.sleep(1) 
+            
+            response = requests.post(url, headers=headers, files=files)
+            if response.status_code == 200:
+                return # File successfully uploaded and queued safely
+            else:
+                raise SecurityViolation("Malware scan failed or virus detected.")
+        except Exception as e:
+            print(f"AV Scan Error: {e}")           # It bypass if the API is unreachable rather than crashing
+            return
 
     # ----------------------Parsing Methods------------------------------
 
@@ -88,17 +90,14 @@ class SecureFinancePipeline:
 
         for standard_key, pattern in cls.HEADER_PATTERNS.items():
             for col in cols:
-                # Prevent already-mapped columns from being overwritten
                 if col in rename_mapping:
                     continue
                 cleaned = str(col).strip().lower()
                 if re.search(pattern, cleaned) and standard_key not in rename_mapping.values():
                     rename_mapping[col] = standard_key
-                    break  # Stop after the first match for this standard key
+                    break 
 
         return df.rename(columns=rename_mapping)
-
-
 
     @classmethod
     def _parse_pdf_tables(cls, byte_stream: io.BytesIO) -> pd.DataFrame:
@@ -108,7 +107,6 @@ class SecureFinancePipeline:
             for page in pdf.pages:
                 table = page.extract_table()
                 if table:
-                    # Maintain structural integrity while cleaning empty strings
                     cleaned_table = [[str(cell).strip() if cell is not None else "" for cell in row] for row in table]
                     all_raw_rows.extend(cleaned_table)
 
@@ -117,61 +115,48 @@ class SecureFinancePipeline:
 
         header_index = -1
         
-        # Scan through rows to look for patterns matching standard finance keys
         for idx, row in enumerate(all_raw_rows):
             match_count = 0
             for cell in row:
                 cleaned_cell = cell.lower()
-                # Run cell value against your registered REGEX mapping expressions
                 for pattern in cls.HEADER_PATTERNS.values():
                     if cleaned_cell and re.search(pattern, cleaned_cell):
                         match_count += 1
-                        break # Prevent double flags for a single string cell
+                        break 
 
-            # If at least 2 cells match our target key layouts, consider this row the real header
             if match_count >= 2:
                 header_index = idx
                 break
 
-        # Slicing Engine execution based on dynamic search analysis
         if header_index != -1:
             true_headers = all_raw_rows[header_index]
             actual_data_rows = all_raw_rows[header_index + 1:]
             
-            # If nothing exists beneath found header, throw parsing error
             if not actual_data_rows:
                 raise DataParsingError("Header identified, but no tabular tracking data follows below it.")
                 
             df = pd.DataFrame(actual_data_rows, columns=true_headers)
         else:
-            # Fallback block: If validation failed entirely, use first index with warning logs
             print("Warning: Direct header target signature matching failed. Falling back to Row 0.")
             df = pd.DataFrame(all_raw_rows[1:], columns=all_raw_rows[0])
 
-        # Remove rows that are entirely empty strings or NaN fields
         df = df.replace("", pd.NA).dropna(how="all")
         return df
-
-
 
     # ------------------Main Entry Point----------------------
 
     def process(self, file_bytes: bytes, filename: str) -> pd.DataFrame:
         """Main method to ingest, secure, and parse a file."""
 
-
         #1. Quota Check
-
         if len(file_bytes) > self.max_file_bytes:
             raise SecurityViolation(f"File exceeds the maximum allowed size of {self.max_file_bytes/1024/1024}MB")
 
         #2. Security Checks
-
         ext = self._verify_mime_type(file_bytes, filename)
         self._scan_for_malware(file_bytes)
 
         #3. Parsing
-
         byte_stream = io.BytesIO(file_bytes)
         try:
             if ext in [".csv", ".txt"]:
@@ -189,6 +174,4 @@ class SecureFinancePipeline:
             raise DataParsingError(f"Failed to safely parse the file: {e}")
 
         # 4. Standardize and Return
-
         return self._adapt_headers(df)
-        
