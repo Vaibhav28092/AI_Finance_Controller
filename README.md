@@ -1,5 +1,4 @@
-# AI_Finance_Controller
-# AI for Finance: Fraud Detection & Expense Intelligence
+# AI Finance Controller: Expense Intelligence
 
 A secure, AI-driven pipeline designed to automate the ingestion, sanitization, and analysis of disparate financial documents (merchant settlements, bank statements, and invoices). This system detects anomalies, standardizes financial headers, and utilizes AI to flag potential fraud or hidden gateway fees.
 
