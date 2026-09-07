@@ -4,7 +4,7 @@ A secure, AI-driven pipeline designed to automate the ingestion, sanitization, a
 
 ## Live Demo
 * **Live App:** [https://ai-finance-controller28.streamlit.app/](https://ai-finance-controller28.streamlit.app/)
-* **Demo Video:** [Insert YouTube/Loom Link Here]
+* **Demo Video:** [https://youtu.be/PVjRznbs0eo](https://youtu.be/PVjRznbs0eo)
 
 ## The Problem & Solution
 
